@@ -21,9 +21,10 @@ jobs:
 
   DeploymentType:
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.upgrade != 'true' }}
     steps:
-    - run: |
-        echo "Upgrade Solutions: ${{ github.event.inputs.upgrade }}"
+      - run: |
+          echo "false or manual"
         
   build:
     strategy:
