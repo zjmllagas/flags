@@ -65,5 +65,6 @@ jobs:
         solution-file: ${{ inputs.solution_release_folder}}/${{ inputs.solution_name }}_managed.zip
         convert-to-managed: true
         force-overwrite: true
+        stage-and-upgrade: true
         publish-changes: true
         run-asynchronously: true
