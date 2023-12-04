@@ -23,7 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - run: |
-        echo "Upgrade Solutions: ${{ github.event.inputs.upgrade }}"
+        if: ${{ github.event.inputs.upgrade == 'true' || github.event.inputs.upgrade == ''}}
+        echo "false or manual"
         
   build:
     strategy:
