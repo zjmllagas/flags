@@ -55,7 +55,7 @@ jobs:
         path: ${{ inputs.solution_release_folder}}
 
     - name: Import solution to sit env (Update)
-      if: ${{ github.event.inputs.type.options == 'Yes' }}
+      if: ${{ github.event.inputs.type == 'false'}}
       uses: microsoft/powerplatform-actions/import-solution@v0
       with:
         environment-url: ${{ secrets.sit_url }}
@@ -70,7 +70,7 @@ jobs:
         run-asynchronously: true
         
     - name: Import solution to sit env (Upgrade)
-      if: ${{ github.event.inputs.type.options == 'Yes' }}
+      if: ${{ github.event.inputs.type == 'true' }}
       uses: microsoft/powerplatform-actions/upgrade-solution@v0
       with:
         environment-url: ${{ secrets.sit_url }}
