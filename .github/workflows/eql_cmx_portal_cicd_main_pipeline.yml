@@ -18,6 +18,13 @@ on:
           - Yes
           
 jobs:
+
+  printInputs:
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        echo "Type: ${{ github.event.inputs.type }}"
+        
   build:
     strategy:
       max-parallel: 1
