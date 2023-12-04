@@ -9,13 +9,13 @@ on:
   workflow_dispatch:
     inputs:
       Type:
-        description: 'deployment type'
+        description: 'Stage and Upgrade'
         required: true
-        default: 'update'
+        default: 'No'
         type: choice
         options:
-          - update
-          - upgrade
+          - No
+          - Yes
           
 jobs:
   build:
