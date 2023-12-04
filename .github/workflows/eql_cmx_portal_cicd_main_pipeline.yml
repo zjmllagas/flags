@@ -8,7 +8,7 @@ on:
     
   workflow_dispatch:
     inputs:
-      Type:
+      type:
         description: 'Stage and Upgrade'
         required: true
         default: 'No'
