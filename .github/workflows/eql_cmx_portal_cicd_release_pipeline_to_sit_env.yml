@@ -71,7 +71,7 @@ jobs:
         
     - name: Import solution to sit env (Upgrade)
       if: ${{ github.event.inputs.type.options == 'Yes' }}
-      uses: microsoft/powerplatform-actions/import-solution@v0
+      uses: microsoft/powerplatform-actions/upgrade-solution@v0
       with:
         environment-url: ${{ secrets.sit_url }}
         app-id: ${{ secrets.sit_client_id }}
@@ -81,7 +81,6 @@ jobs:
         solution-file: ${{ inputs.solution_release_folder}}/${{ inputs.solution_name }}_managed.zip
         convert-to-managed: true
         force-overwrite: true
-        import-as-holding: true
         stage-and-upgrade: true
         publish-changes: true
         run-asynchronously: true
