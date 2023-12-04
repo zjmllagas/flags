@@ -8,8 +8,8 @@ on:
     
   workflow_dispatch:
     inputs:
-      type:
-        description: 'Stage and Upgrade'
+      upgrade:
+        description: 'Upgrade Solutions'
         required: true
         default: 'No'
         type: choice
@@ -19,11 +19,11 @@ on:
           
 jobs:
 
-  printInputs:
+  DeploymentType:
     runs-on: ubuntu-latest
     steps:
     - run: |
-        echo "Type: ${{ github.event.inputs.type }}"
+        echo "Upgrade Solutions: ${{ github.event.inputs.upgrade }}"
         
   build:
     strategy:

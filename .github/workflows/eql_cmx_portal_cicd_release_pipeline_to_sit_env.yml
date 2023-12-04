@@ -54,8 +54,8 @@ jobs:
         name: ${{ inputs.solution_name }}
         path: ${{ inputs.solution_release_folder}}
 
-    - name: Import solution to sit env (Update)
-      if: ${{ github.event.inputs.type == 'false'}}
+    - name: Import solution to sit env 
+      if: ${{ github.event.inputs.upgrade == 'false'}}
       uses: microsoft/powerplatform-actions/import-solution@v0
       with:
         environment-url: ${{ secrets.sit_url }}
@@ -69,8 +69,24 @@ jobs:
         publish-changes: true
         run-asynchronously: true
         
-    - name: Import solution to sit env (Upgrade)
-      if: ${{ github.event.inputs.type == 'true' }}
+    - name: Import as holding solution to sit env 
+      if: ${{ github.event.inputs.upgrade == 'true' }}
+      uses: microsoft/powerplatform-actions/import-solution@v0
+      with:
+        environment-url: ${{ secrets.sit_url }}
+        app-id: ${{ secrets.sit_client_id }}
+        client-secret: ${{ secrets.sit_secrets_id }}
+        tenant-id: ${{ secrets.sit_tenant_id }}
+        solution-name: ${{ inputs.solution_name }}
+        solution-file: ${{ inputs.solution_release_folder}}/${{ inputs.solution_name }}_managed.zip
+        convert-to-managed: true
+        force-overwrite: true
+        import-as-holding: true
+        publish-changes: true
+        run-asynchronously: true
+        
+    - name: Apply solution upgrade
+      if: ${{ github.event.inputs.upgrade == 'true' }}
       uses: microsoft/powerplatform-actions/upgrade-solution@v0
       with:
         environment-url: ${{ secrets.sit_url }}
@@ -81,6 +97,4 @@ jobs:
         solution-file: ${{ inputs.solution_release_folder}}/${{ inputs.solution_name }}_managed.zip
         convert-to-managed: true
         force-overwrite: true
-        stage-and-upgrade: true
         publish-changes: true
-        run-asynchronously: true
