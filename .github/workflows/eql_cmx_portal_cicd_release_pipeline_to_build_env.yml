@@ -83,6 +83,7 @@ jobs:
         tenant-id: ${{ secrets.build_tenant_id }}
         solution-file: ${{ inputs.solution_outbound_folder}}/${{ inputs.solution_name }}.zip
         force-overwrite: true
+        stage-and-upgrade: true
         publish-changes: true
         run-asynchronously: true
 
