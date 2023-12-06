@@ -35,7 +35,7 @@ on:
        type: string
 
 jobs:
-  export-cmx10-from-dev:
+  export-solution-from-dev:
     environment: dev
     runs-on: windows-latest
     env:
@@ -53,7 +53,7 @@ jobs:
         with:
           lfs: true
 
-      - name: export cmx10 solution from dev
+      - name: export solution from dev
         uses: microsoft/powerplatform-actions/export-solution@v0
         with:
           environment-url: ${{ secrets.dev_url }}
