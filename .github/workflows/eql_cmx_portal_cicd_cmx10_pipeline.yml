@@ -4,7 +4,7 @@ name: eql_cmx_portal_cicd_cmx10_pipeline.yml
 
 run-name: Triggered by @${{ github.actor }}
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       # Change this value
       solution_name: 
@@ -33,27 +33,6 @@ on:
        required: true
        default: solutions/
        type: string
-       upgrade:
-        description: 'Upgrade Solutions'
-        required: true
-        default: 'No'
-        type: choice
-        options:
-          - No
-          - Yes
-    secrets:
-      dev_url: ${{ secrets.dev_url }}
-        description: 'Dev environment url.'
-        required: true      
-      dev_client_id: ${{ secrets.dev_client_id }}
-        description: 'The client id dev'
-        required: true
-      dev_tenant_id: ${{ secrets.dev_tenant_id }}
-        description: 'The tenant id'
-        required: true
-      dev_secrets_id: ${{ secrets.dev_secrets_id }}
-        description: 'The secret value for authentication using SPN'
-        required: true
 
 jobs:
   export-cmx10-from-dev:
