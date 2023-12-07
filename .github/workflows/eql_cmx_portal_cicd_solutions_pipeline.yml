@@ -1,4 +1,4 @@
-name: eql_cmx_portal_cicd_cmx10_pipeline.yml
+name: eql_cmx_portal_cicd_solutions_pipeline.yml
 # Export CMX20WebResources solution from DEV environment
 #  unpack it and prepare, commit and push a git branch with the changes
 
@@ -154,3 +154,58 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
 
+  import-to-build:
+    runs-on: windows-latest
+    environment: build
+    env:
+      RUNNER_DEBUG: 1
+    steps:
+      - name: git config to accept long paths
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git config --system core.longpaths true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
+          ref: develop
+
+      - name: pack solution
+        uses: microsoft/powerplatform-actions/pack-solution@v0
+        with:
+          solution-folder: ${{ inputs.solution_source_folder}}/${{ inputs.solution_name }}
+          solution-file: ${{ inputs.solution_outbound_folder}}/${{ inputs.solution_name }}.zip
+          solution-type: Unmanaged
+          
+      - name: Import solution as unmanaged to build env
+        uses: microsoft/powerplatform-actions/import-solution@v0
+        with:
+          environment-url: ${{ secrets.build_url }}
+          app-id: ${{ secrets.build_client_id }}
+          client-secret: ${{ secrets.build_secrets_id }}
+          tenant-id: ${{ secrets.build_tenant_id }}
+          solution-file: ${{ inputs.solution_outbound_folder}}/${{ inputs.solution_name }}.zip
+          force-overwrite: true
+          publish-changes: true
+          run-asynchronously: true
+          max-async-wait-time: 300
+
+      - name: export solution as managed from buid env
+        uses: microsoft/powerplatform-actions/export-solution@v0
+        with:
+          environment-url: ${{ secrets.build_url }}
+          app-id: ${{ secrets.build_client_id }}
+          client-secret: ${{ secrets.build_secrets_id }}
+          tenant-id: ${{ secrets.build_tenant_id }}
+          solution-name: ${{ inputs.solution_name }}
+          managed: true
+          solution-output-file: ${{ inputs.solution_shipping_folder}}/${{ inputs.solution_name }}_managed.zip
+        
+      - name: Upload the ready to ship solution to GH artifact store
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ inputs.solution_name }}
+          path: ${{ inputs.solution_shipping_folder}}${{ inputs.solution_name }}_managed.zip
