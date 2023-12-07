@@ -36,7 +36,7 @@ on:
 
 jobs:
   export-solution-from-dev:
-    name: exportdev
+    name: export_from_dev
     environment: dev
     runs-on: windows-latest
     env:
@@ -154,10 +154,9 @@ jobs:
 
       - name: Display structure of downloaded files
         run: ls -R
-
+  
   import-to-build:
-    name: importbuild
-    needs: exportdev
+    name: import_to_build
     runs-on: windows-latest
     environment: build
     env:
