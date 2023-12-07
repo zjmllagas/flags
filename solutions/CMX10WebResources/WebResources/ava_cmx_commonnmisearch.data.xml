@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WebResource xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <WebResourceId>{1b46f2fd-d894-ee11-be37-002248a44de2}</WebResourceId>
+  <Name>ava_cmx_commonnmisearch</Name>
+  <DisplayName>cmx_commonnmisearch</DisplayName>
+  <WebResourceType>3</WebResourceType>
+  <IntroducedVersion>1.0.0.0</IntroducedVersion>
+  <IsEnabledForMobileClient>0</IsEnabledForMobileClient>
+  <IsAvailableForMobileOffline>0</IsAvailableForMobileOffline>
+  <IsCustomizable>1</IsCustomizable>
+  <CanBeDeleted>1</CanBeDeleted>
+  <IsHidden>0</IsHidden>
+  <FileName>/WebResources/ava_cmx_commonnmisearch1B46F2FD-D894-EE11-BE37-002248A44DE2</FileName>
+</WebResource>
