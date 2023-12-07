@@ -40,7 +40,7 @@ jobs:
       max-parallel: 1
 
   export-solution-from-dev:
-    name: export-dev
+    name: devexport
     environment: dev
     runs-on: windows-latest
     env:
@@ -160,8 +160,8 @@ jobs:
         run: ls -R
 
   import-to-build:
-    name: import-build
-    needs: export-dev
+    name: buildimport
+    needs: devexport
     runs-on: windows-latest
     environment: build
     env:
