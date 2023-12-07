@@ -157,6 +157,7 @@ jobs:
   
   import-to-build:
     name: import_to_build
+    needs: export-solution-from-dev
     runs-on: windows-latest
     environment: build
     env:
