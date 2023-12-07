@@ -16,7 +16,15 @@ on:
         description: 'name of the branch created'
         required: true
         default: solution
-        type: string        
+        type: string
+      upgrade:
+        description: 'Upgrade Solutions'
+        required: true
+        default: 'No'
+        type: choice
+        options:
+          - No
+          - Yes        
       #Do Not change these values
       # Export to Dev inputs
       solution_exported_folder:
@@ -54,7 +62,6 @@ on:
 
 jobs:
   export-solution-from-dev:
-    name: export_from_dev
     environment: dev
     runs-on: windows-latest
     env:
@@ -173,8 +180,7 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
   
-  import-to-build:
-    name: import_to_build
+  import-to-build-env:
     needs: export-solution-from-dev
     runs-on: windows-latest
     environment: build
@@ -230,3 +236,78 @@ jobs:
         with:
           name: ${{ inputs.solution_name }}
           path: ${{ inputs.solution_shipping_folder}}${{ inputs.solution_name }}_managed.zip
+
+  release-to-sit-env:
+    needs: import-to-build-env
+    runs-on: windows-latest
+    environment: sit
+    env:
+      RUNNER_DEBUG: 1
+    steps:
+    - name: git config to accept long paths
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "<>"
+        git config --system core.longpaths true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: actions/checkout@v2
+      with:
+        lfs: true
+
+    - name: Fetch the ready to ship solution from GH artifact store
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ inputs.solution_name }}
+        path: ${{ inputs.solution_release_folder}}
+        
+    - name: Import solution to sit env
+      if: ${{ github.event.inputs.upgrade != 'true'}}
+      uses: microsoft/powerplatform-actions/import-solution@v0
+      with:
+        environment-url: ${{ secrets.sit_url }}
+        app-id: ${{ secrets.sit_client_id }}
+        client-secret: ${{ secrets.sit_secrets_id }}
+        tenant-id: ${{ secrets.sit_tenant_id }}
+        solution-name: ${{ inputs.solution_name }}
+        solution-file: ${{ inputs.solution_release_folder}}/${{ inputs.solution_name }}_managed.zip
+        convert-to-managed: true
+        force-overwrite: true
+        publish-changes: true
+        run-asynchronously: true
+        max-async-wait-time: 300
+
+    - name: Import as holding solution to sit env
+      if: ${{ github.event.inputs.upgrade == 'true' }}
+      uses: microsoft/powerplatform-actions/import-solution@v0
+      with:
+        environment-url: ${{ secrets.sit_url }}
+        app-id: ${{ secrets.sit_client_id }}
+        client-secret: ${{ secrets.sit_secrets_id }}
+        tenant-id: ${{ secrets.sit_tenant_id }}
+        solution-name: ${{ inputs.solution_name }}
+        solution-file: ${{ inputs.solution_release_folder}}/${{ inputs.solution_name }}_managed.zip
+        convert-to-managed: true
+        force-overwrite: true
+        import-as-holding: true
+        publish-changes: true
+        run-asynchronously: true
+        max-async-wait-time: 300
+
+    - name: Apply solution upgrade
+      if: ${{ github.event.inputs.upgrade == 'true' }}
+      uses: microsoft/powerplatform-actions/upgrade-solution@v0
+      with:
+        environment-url: ${{ secrets.sit_url }}
+        app-id: ${{ secrets.sit_client_id }}
+        client-secret: ${{ secrets.sit_secrets_id }}
+        tenant-id: ${{ secrets.sit_tenant_id }}
+        solution-name: ${{ inputs.solution_name }}
+        solution-file: ${{ inputs.solution_release_folder}}/${{ inputs.solution_name }}_managed.zip
+        convert-to-managed: true
+        force-overwrite: true
+        publish-changes: true
+        run-asynchronously: true
+        max-async-wait-time: 300
+
