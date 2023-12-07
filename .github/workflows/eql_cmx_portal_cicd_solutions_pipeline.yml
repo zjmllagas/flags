@@ -36,7 +36,7 @@ on:
 
 jobs:
   export-solution-from-dev:
-    name: export-dev
+    name: exportdev
     environment: dev
     runs-on: windows-latest
     env:
@@ -156,8 +156,8 @@ jobs:
         run: ls -R
 
   import-to-build:
-    name: import-build
-    needs: export-dev
+    name: importbuild
+    needs: exportdev
     runs-on: windows-latest
     environment: build
     env:
