@@ -2,7 +2,7 @@ name: eql_cmx_portal_cicd_solutions_pipeline.yml
 # Export CMX20WebResources solution from DEV environment
 #  unpack it and prepare, commit and push a git branch with the changes
 
-run-name: Triggered by @${{ github.actor }}
+run-name: Deploy ${{ inputs.solution_name }} triggered by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
