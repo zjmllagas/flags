@@ -11,7 +11,16 @@ on:
         description: 'name of the solution to worked on from Power Platform'
         required: true
         default: CMX10WebResources
-        type: string
+        type: choice
+          options:
+            - CMX10WebResources
+            - CMX20Customizing
+            - CMX30Plugin
+            - CMX40Workflows
+            - CMX50Flows
+            - CMX60Templates
+            - CMX70CanvasApp
+
       branch_name: 
         description: 'name of the branch created'
         required: true
