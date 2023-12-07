@@ -35,12 +35,8 @@ on:
        type: string
 
 jobs:
-  build:
-    strategy:
-      max-parallel: 1
-
   export-solution-from-dev:
-    name: devexport
+    name: export-dev
     environment: dev
     runs-on: windows-latest
     env:
@@ -160,8 +156,8 @@ jobs:
         run: ls -R
 
   import-to-build:
-    name: buildimport
-    needs: devexport
+    name: import-build
+    needs: export-dev
     runs-on: windows-latest
     environment: build
     env:
