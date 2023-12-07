@@ -1,0 +1,749 @@
+if (typeof (EQL) === "undefined") { EQL = {}; }
+if (typeof (EQL.WebResource) === "undefined") { EQL.WebResource = {}; }
+if (typeof (EQL.WebResource.Common) === "undefined") { EQL.WebResource.Common = {}; }
+
+let savingErrorFound = false;
+let AllRetrievedRecordFromSearch = [];
+let SelectedRecordsFromResult = [];
+
+//Run scripts specifc per entities
+//**NOTE: Execution Context is not available on load of the web resource. Therefore, formContext operations cannot be executed onload of NMI Seach Web Resource*/
+EQL.WebResource.Common.BodyOnload = function () {
+    "use strict";
+    switch (mainEntity) {
+        case "cmx_csmsansapplication":
+            document.getElementById("modalsavebutton").innerHTML = "ADD";
+            document.getElementById("modalClose").innerHTML = "CANCEL";
+            EQL.WebResource.Common.CreateCustomHeaderForSansAppAndLinkedNMI();
+            break;
+        case "cmx_csmlinkednmi":
+        case "cmx_csmmeterread":
+            document.getElementById("modalClose").innerHTML = "CANCEL";
+            EQL.WebResource.Common.CreateCustomHeaderForSansAppAndLinkedNMI();
+            break;
+        case "cmx_connectapplication":
+            EQL.WebResource.CX.hideCloseButton();
+            break;
+
+        case "cmx_electricalworkrequest":
+            EQL.WebResource.EWR.EWROnLoad();
+            break;
+
+        default:
+            break;
+    }
+};
+
+EQL.WebResource.Common.GetNMI = async function (filterParams) {
+    "use strict";
+    let queriedData = await Xrm.WebApi.retrieveMultipleRecords("cmx_virtualnmi", filterParams).then(
+        function success(result) {
+            if (result.entities.length > 0) {
+                switch (mainEntity) {
+                    case "cmx_electricalworkrequest":
+                        //Remove Extinct NMI Status
+                        AllRetrievedRecordFromSearch = result.entities.filter(nmi => nmi.cmx_nmistatus !== "X").filter(nmi => nmi.cmx_nmistatus !== "E");
+                        break;
+                    case "cmx_connectapplication":
+                        //Remove Extinct NMI Status
+                        AllRetrievedRecordFromSearch = result.entities.filter(nmi => nmi.cmx_nmistatus !== "X").filter(nmi => nmi.cmx_nmistatus !== "E");
+                        break;
+                    case "cmx_csmsansapplication":
+                    case "cmx_csmlinkednmi":
+                    case "cmx_csmmeterread":
+                        AllRetrievedRecordFromSearch = result.entities.filter(nmi => nmi.cmx_nmistatus === "A");
+                        break;
+                    default:
+                        AllRetrievedRecordFromSearch = result.entities;
+                        break;
+                }
+            }
+            // perform additional operations on retrieved records
+        },
+        function (error) {
+            console.log(error.message);
+            // handle error conditions
+        }
+    );
+    return queriedData;
+};
+
+EQL.WebResource.Common.DisplayResult = async function () {
+    "use strict";
+    switch (mainEntity) {
+        case "cmx_csmsansapplication":
+            EQL.WebResource.Common.constructResultPremiseSearch();
+            break;
+        case "cmx_csmlinkednmi":
+        case "cmx_csmmeterread":
+            EQL.WebResource.Common.constructResultPremiseSearch();
+            EQL.WebResource.Common.OneNMISelection();
+            break;
+        case "cmx_electricalworkrequest":
+            EQL.WebResource.EWR.EWRDisplayResults();
+            break;
+        case "cmx_connectapplication":
+            //Construct Table for NMI Search results
+            await EQL.WebResource.Common.constructResultTable();
+            await EQL.WebResource.CX.addDataOnClickOfSearchBtn();
+            await EQL.WebResource.CX.validateNMIResults();
+            await EQL.WebResource.CX.deleteManuallyEnterPremiseButton();
+            break;
+
+        default:
+            break;
+    }
+    return;
+};
+
+//Display Message if no results found
+EQL.WebResource.Common.displayNoResultsFound = function () {
+    "use strict";
+    let notifMessageDiv = '';
+    switch (mainEntity) {
+        case "cmx_electricalworkrequest":
+            notifMessageDiv = `<div class="mandatory-txt"><br><b>No results found!</b><br>If the request is for an existing NMI, please check the details you are searching for.</div>`;
+            break;
+
+        case "cmx_connectapplication":
+            notifMessageDiv = `<div class="mandatory-txt"><br><b>No results found!</b><br>If the request is for an existing NMI, please check the details you are searching for. If no known NMI/Address exists, you can manually enter premise details by clicking "Manually enter a new Premises".</div>`;
+            EQL.WebResource.CX.addManualAddPremiseButton();
+            break;
+
+        case "cmx_csmsansapplication":
+        case "cmx_csmlinkednmi":
+        case "cmx_csmmeterread":
+            notifMessageDiv = `<div class="mandatory-txt"><br><b>No results found!</b><br>If the request is for an existing NMI, please check the details you are searching for.</div>`;
+
+            break;
+
+        default:
+            break;
+    }
+    //Hide results table if any
+    $('#nmi-table-result_wrapper').hide();
+    //Insert notification message in nmiarea
+    $('#nmiarea').children('.mandatory-txt').remove();
+    $('#nmiarea').append(notifMessageDiv);
+};
+
+//Triggered on click of save button
+EQL.WebResource.Common.SaveSelectedNMIs = async function () {
+    "use strict";
+
+    savingErrorFound = false;
+    switch (mainEntity) {
+        case "cmx_csmsansapplication":
+            for (let j = 0; j < selectedNMIRecord.length; j++) {
+                await EQL.WebResource.Common.SaveInSansApp(selectedNMIRecord[j].cmx_name);
+                //Automatic Close pop-up window 
+                if (j === selectedNMIRecord.length - 1 && savingErrorFound === false) {
+                    EQL.WebResource.Common.CloseNMISearch();
+                }
+            }
+            break;
+        case "cmx_csmlinkednmi":
+        case "cmx_csmmeterread":
+            EQL.WebResource.Common.CloseNMISearch(selectedNMIRecord[0].cmx_name);
+            break;
+        case "cmx_electricalworkrequest":
+            EQL.WebResource.EWR.onClickOfSaveButtonEWR();
+            break;
+        default:
+            break;
+    }
+
+};
+
+//Close pop-up window if NMI search is thru pop-up
+EQL.WebResource.Common.CloseNMISearch = function (param) {
+    "use strict";
+    switch (mainEntity) {
+        case "cmx_csmsansapplication":
+            window.close();
+            break;
+        case "cmx_connectapplication":
+            EQL.WebResource.CX.hideNMIAddressSearch();
+            break;
+        case "cmx_csmlinkednmi":
+        case "cmx_csmmeterread":
+            //passnmi to ribbonjs upon closing the search
+            if (param !== null)
+                window.returnValue = param;
+            window.close();
+            break;
+        case "cmx_electricalworkrequest":
+            EQL.WebResource.EWR.onClickOfCloseButtonEWR();
+            break;
+        default:
+            break;
+    }
+};
+
+//Mask NMI details e.g. xxxxxxx1234
+EQL.WebResource.Common.maskNMI = function (nmiString) {
+    "use strict";
+    switch (mainEntity) {
+        case "cmx_csmsansapplication":
+        case "cmx_csmlinkednmi":
+        case "cmx_csmmeterread":
+            return nmiString
+        case "cmx_electricalworkrequest":
+            return "XXXXXXX" + nmiString.slice(7);
+    }
+};
+
+//Add NMI on selected results table oncheck of the selected nmi 
+EQL.WebResource.Common.oncheckNMIRow = function (rowID) {
+    "use strict";
+    //document.getElementById("selectedContent").style.display = "block";
+
+    let selectedCheckboxId = "#" + rowID;
+    let rowindex = $(selectedCheckboxId)[0].getAttribute('data-index');
+
+    if ($(selectedCheckboxId).prop('checked') === true) {
+
+        let currentRow = $(selectedCheckboxId).closest("tr");
+
+        // let colguid = currentRow.find("td:eq(0)").text();
+        let colnmi = currentRow.find("td:eq(2)").text();
+        let coladdress = currentRow.find("td:eq(3)").text();
+        let temptabletrr = "";
+        switch (mainEntity) {
+            case "cmx_csmsansapplication":
+            case "cmx_csmlinkednmi":
+            case "cmx_csmmeterread":
+                temptabletrr = "<tr>" +
+                    "<td>" +
+                    colnmi +
+                    "</td><td>" +
+                    coladdress +
+                    "</td><td style='cursor: pointer;'><img src='../WebResources/cmx_delete-icon.png' alt='' style='' id='" + "btn_delete_" + rowID + "'" + " type='button value='delete' onclick='EQL.WebResource.NMISearch.deleteRow(this)'></td></tr>";
+                break;
+            case "cmx_electricalworkrequest":
+                break;
+        }
+
+        $('#tblPage').append(temptabletrr);
+
+        let getVirtualNMIData = AllRetrievedRecordFromSearch.find(x => x.cmx_virtualnmiid === rowID);
+        if (getVirtualNMIData !== undefined)
+            selectedNMIRecord.push(getVirtualNMIData);
+
+        document.getElementById("selectedContent").style.display = "block";
+        document.getElementById("modalsavebutton").style.display = "inline-block";
+
+    }
+    else {
+        //remove from the temp table
+        let bttnId = "btn_delete_" + rowID;
+        //remove from the array
+        let index = selectedNMIRecord.findIndex(function (item) {
+            return item.cmx_virtualnmiid === bttnId;
+        });
+        if (index !== -1) {
+            selectedNMIRecord.splice(index, 1);
+        }
+        if (document.getElementById(bttnId) != null) {
+            document.getElementById(bttnId).click();
+        }
+    }
+};
+
+EQL.WebResource.Common.OneNMISelection = function () {
+    $('input.chkNumber').on('change', function () {
+        for (var i = 0; i < selectedNMIRecord.length; i++) {
+            //remove from the temp table
+            let bttnId = "btn_delete_" + selectedNMIRecord[i].cmx_virtualnmiid;
+            if (selectedNMIRecord[i].cmx_virtualnmiid !== this.id)
+                document.getElementById(bttnId).click();
+        }
+    });
+};
+
+//Show user progress indicator / native XRM loading spinner
+EQL.WebResource.Common.ShowProgressIndicator = function () {
+    "use strict";
+    Xrm.Utility.showProgressIndicator("Please wait a moment");
+};
+
+//Hide progress indicator / native XRM loading spinner
+EQL.WebResource.Common.CloseProgressIndicator = function () {
+    "use strict";
+    Xrm.Utility.closeProgressIndicator();
+};
+
+//*To be separated file for SANS Application entity
+//Pass selected NMI/s on click of Save Button for SANS App
+EQL.WebResource.Common.SaveInSansApp = async function (nmiNumber) {
+    "use strict";
+    let record = {};
+    record["cmx_sansreferencenumber@odata.bind"] = "/cmx_csmsansapplications(" + parentGuid + ")"
+    record.cmx_nmistring = nmiNumber;
+
+    //create interrupted premise record
+    await Xrm.WebApi.createRecord("cmx_csminterruptedpremises", record).then(
+        function success(result) {
+            //console.log("interrupted premise record created");
+            // perform operations on record creation
+        },
+        function (error) {
+            savingErrorFound = true;
+            EQL.WebResource.Common.showAlertMessage(error.message)
+        }
+    );
+};
+
+//*To be separated file for SANS Application entity
+//Called on load of Component for SANS app and LinkedNMI
+EQL.WebResource.Common.CreateCustomHeaderForSansAppAndLinkedNMI = function () {
+    "use strict";
+    //create header on selected table
+    let tableElement = document.getElementById("nmi-table-temp");
+    let header = tableElement.createTHead();
+    let headerRow = header.insertRow(0);
+    let nmiColumn = document.createElement('th');
+    let addressColumn = document.createElement('th');
+    nmiColumn.innerHTML = "NMI";
+    addressColumn.innerHTML = "Address";
+
+    headerRow.appendChild(nmiColumn);
+    headerRow.appendChild(addressColumn);
+};
+
+//When user clicks Save Button
+EQL.WebResource.Common.OnSave = async function () {
+    "use strict";
+    EQL.WebResource.Common.ShowProgressIndicator();
+
+    if (selectedNMIRecord.length === 0) {
+        // selectedNMIRecord.splice(0, selectedNMIRecord.length);
+        EQL.WebResource.Common.showAlertMessage("There is no selected record to be saved.");
+    }
+    else {
+        await EQL.WebResource.Common.SaveSelectedNMIs();
+
+    }
+
+    EQL.WebResource.Common.CloseProgressIndicator();
+};
+
+//Alert message
+EQL.WebResource.Common.showAlertMessage = function (alertMessage, title) {
+    "use strict";
+    let alertStrings = {
+        confirmButtonLabel: "OK",
+        text: alertMessage,
+        title: title != null ? title : "Business Process Error"
+    };
+    Xrm.Navigation.openAlertDialog(alertStrings);
+};
+
+EQL.WebResource.Common.validateNmiDetails = async function () {
+    "use strict";
+    switch (mainEntity) {
+        case "cmx_electricalworkrequest":
+
+            let table = document.getElementById('nmi-table-result');
+            let row = table.querySelectorAll('tbody tr');
+            let serviceSelectionValue = $('#serviceSelectionField').val();
+
+            //Get Service Selection Details from WebAPI (EWR Portal - WebAPI Service Type and Selection)
+            let serviceST = await EQL.WebResource.NMISearch.retrieveServiceSelection();
+            let serviceSelectionGuid = serviceST.serviceSelectionId;
+            let serviceSelectionVal = serviceST.serviceSelection;
+            let isErgon = EQL.WebResource.NMISearch.isForErgonOnly(serviceSelectionVal);
+
+            //Set variable to define valid/invalid NMI
+            //Default: true
+            let isValidNmi = true;
+
+            //Get NMI Connection Type using the Service Selection in EWR
+            let nmiConnectionType = await EQL.WebResource.NMISearch.getNmiConnectionType(serviceSelectionGuid);
+
+            //Grey out invalid NMIs
+            row.forEach(nmiRow => {
+                //Get NMI column values from each row
+                let connectionType = nmiRow.querySelector('td:nth-child(6)').textContent;
+                let status = nmiRow.querySelector('td:nth-child(5)').textContent;
+                //let nmiGuid = nmiRow.getAttribute('id');
+                let nmiGuid = nmiRow.querySelector('td:nth-child(1)').textContent;
+
+                //Filter NMI Connection Type Array based on row value
+                let refValidation = nmiConnectionType.filter(e => e.ConnectionType === connectionType).first();
+
+                //Filter NMI Results data based on selected row
+                let selectedNMI = AllRetrievedRecordFromSearch.filter(res => res.cmx_virtualnmiid === nmiGuid).first();
+
+                //If selected Service Selection is an Ergon Only, isErgon flag is true
+                //If isErgon=true, validate if selected NMI's company code is EE (Ergon)
+                if (isErgon) {
+                    if (selectedNMI['cmx_companycode'] === 'EE') {
+                        isValidNmi = true;
+                    } else {
+                        isValidNmi = false;
+                    }
+                }
+
+                //Validate based on NMI Statuses
+                if (refValidation.IsValid && isValidNmi) {
+                    if (status === 'ACTIVE' || status === 'DE-ENERGIZED') {
+                        if (!refValidation.AllowedOnConnected) {
+                            EQL.WebResource.Common.setNmIAsInvalid(nmiRow);
+                        }
+                    } else if (status === 'GREENFIELD' || status === 'UNKNOWN') {
+                        if (!refValidation.AllowedOnGU) {
+                            EQL.WebResource.Common.setNmIAsInvalid(nmiRow);
+                        }
+                    }
+                } else {
+                    //Automatic set to invalid if NMI Connection Type's isValid = No
+                    EQL.WebResource.Common.setNmIAsInvalid(nmiRow);
+                }
+            });
+            break;
+    }
+
+};
+
+//Set NMI Row as invalid
+EQL.WebResource.Common.setNmIAsInvalid = function (nmiRow) {
+    "use strict";
+    $(nmiRow).addClass('disabled-nmi');
+    nmiRow.addEventListener('click', showInvalidNmiSelected);
+
+    //This will display a message that NMI selected is invalid
+    //Used as event listener on click of row in NMI search results table
+    function showInvalidNmiSelected() {
+        //Hide NMI Search Result
+        $('#searchcriterianmimetertbl').hide();
+
+        //Add element to notify invalid Selection
+        let divMessage = "<div id='invalid-nmi-message'><div id='invalid-nmi-header' class='field-lbl'>INVALID NMI SELECTED</div><div id='invalid-nmi-message'>You picked an invalid NMI. Please choose a NMI that is not grayed out.</div><button id='invalid-nmi-ok-btn' class='btn btn-default src-nmi-btn' type='button'>Okay</button></div>"
+        $('#searchcriterianmimetertbl').after(divMessage);
+
+        $('#invalid-nmi-ok-btn').click(function () {
+            //Hide Message
+            $('#invalid-nmi-message').hide();
+
+            //Show NMI Search Result
+            $('#searchcriterianmimetertbl').show();
+        })
+    };
+};
+
+
+
+//Create the results table based on data(object) passed from NMI VE
+EQL.WebResource.Common.constructResultTable = async function () {
+    "use strict";
+    nmiCount = AllRetrievedRecordFromSearch.length;
+    countElement = "";
+    if (nmiCount > 1) {
+        countElement = `<div id="row-count" style="text-align: end;">Row Count: <b>${nmiCount}</b></div>`;
+    }
+    let nmiTable = countElement + "<table id='nmi-table-result' class='display table table-striped'><thead><th>NMI</th><th>Address</th><th>NMI Status</th><th>Connection Type</th><th>Tariff</th></tr></thead><tbody>@tr</tbody></table>";
+    let trr = "";
+    for (let i = 0; i < AllRetrievedRecordFromSearch.length; i++) {
+        let result = AllRetrievedRecordFromSearch[i];
+        // NMI Attributes to use in columns
+        let cmx_virtualnmiid = result["cmx_virtualnmiid"]; // Guid
+        let cmx_address = result["cmx_address"]; // Text
+        let cmx_connectiontype = result["cmx_connectiontype"]; // Text
+        let cmx_name = result["cmx_name"]; // Text
+        let cmx_nmistatus = EQL.WebResource.Common.convertNmiStatus(result["cmx_nmistatus"].toString()); // Text
+        let cmx_tariffcode = result["cmx_tariffcode"]; // Text
+
+        //Attaching NMi attributes per table row
+        trr =
+            trr +
+            "<tr id='" +
+            cmx_virtualnmiid +
+            "'><td>" +
+            cmx_name +
+            "</td><td>" +
+            cmx_address +
+            "</td><td>" +
+            cmx_nmistatus +
+            "</td><td>" +
+            cmx_connectiontype +
+            "</td><td>" +
+            cmx_tariffcode +
+            "</td></tr>";
+    }
+
+    nmiTable = nmiTable.replace("@tr", trr);
+    document.getElementById("nmiarea").innerHTML = nmiTable;
+    $("#nmi-table-result").DataTable({
+        pageLength: 5,
+        pagingType: "numbers",
+        bLengthChange: false,
+        bFilter: true,
+        bInfo: false,
+        searching: false,
+    });
+};
+
+//Call this function to construct results table for EWR - multi unit dwelling
+EQL.WebResource.Common.constructResultTableMultiDwelling = function (results) {
+    "use strict";
+
+    nmiCount = results.length;
+    countElement = "";
+    if (nmiCount > 1) {
+        countElement = `<div id="row-count" style="text-align: end;">Row Count: <b>${nmiCount}</b></div>`;
+    }
+
+    let nmiTable =
+        countElement + "<table id='nmi-table-result' class='display table'><thead><th style='display: none;'>NMI Num</th><th class='ckeck_1'></th><th>NMI</th><th>Address</th><th>NMI Status</th><th>Connection Type</th><th>Tariff</th><th>Lot No</th><th>Plan No</th><th>Property Title</th><th>Street Number</th><th>Street Type</th><th>Suburb</th><th>Unit Number</th></tr></thead><tbody>@tr</tbody></table>";
+    let trr = "";
+    for (let i = 0; i < results.length; i++) {
+
+        let result = results[i];
+        // NMI Attributes to use in columns
+        let cmx_virtualnmiid = result["cmx_virtualnmiid"]; // Guid
+        let cmx_address = result["cmx_address"]; // Text
+        let cmx_connectiontype = result["cmx_connectiontype"]; // Text
+        let cmx_name = EQL.WebResource.Common.maskNMI(result["cmx_name"].toString()); // Text
+        let cmx_nmistatus = EQL.WebResource.Common.convertNmiStatus(result["cmx_nmistatus"].toString()); // Text
+        let cmx_tariffcode = result["cmx_tariffcode"]; // Text
+        let cmx_nminumber = result["cmx_name"].toString();
+        let cmx_lotnumber = result["cmx_lotnumber"]; // Text
+        let cmx_plannumber = result["cmx_plannumber"]; // Text
+        let cmx_propertytitle = result["cmx_propertytitle"]; // Text
+        let cmx_streetname = result["cmx_streetname"]; // Text
+        let cmx_streetnumber = result["cmx_streetnumber"]; // Text
+        let cmx_streettype = result["cmx_streettype"]; // Text
+        let cmx_suburb = result["cmx_suburb"]; // Text
+        let cmx_unitnumber = result["cmx_unitnumber"]; // Text
+        let isChecked = "";
+        if (selectedNMIRecord.length > 0) {
+            let index = selectedNMIRecord.findIndex(function (item) {
+                return item.cmx_virtualnmiid === cmx_virtualnmiid;
+            })
+            if (index !== -1) {
+                isChecked = "checked"
+            }
+        }
+
+        //Attaching NMi attributes per table row
+        trr =
+            trr +
+            "<tr><td style='display: none;'>" +
+            cmx_virtualnmiid +
+            "</td><td><input id='" + cmx_virtualnmiid + "' type='checkbox' class='chkNumber'  data-index ='" + i + "' data-nminumber ='" + cmx_nminumber + "' data-virtualnminame ='" + cmx_name + "' data-tariffcode='" + cmx_tariffcode + "' data-address='" + cmx_address + "'  data-nmistatus='" + cmx_nmistatus + "' data-connectiontype='" + cmx_connectiontype + "' value='" + cmx_virtualnmiid + "'" + " onclick=EQL.WebResource.Common.oncheckNMIRow('" + cmx_virtualnmiid + "') " + isChecked + ">" +
+            "</td><td><strong class='cmx_name'>" +
+            cmx_name +
+            "</strong></td><td><strong class='cmx_address'>" +
+            cmx_address +
+            "</strong></td><td>" +
+            cmx_nmistatus +
+            "</td><td>" +
+            cmx_connectiontype +
+            "</td><td>" +
+            cmx_tariffcode +
+            "</td><td>" +
+            cmx_lotnumber +
+            "</td><td>" +
+            cmx_plannumber +
+            "</td><td>" +
+            cmx_propertytitle +
+            "</td><td>" +
+            cmx_streetnumber +
+            "</td><td>" +
+            cmx_streettype +
+            "</td><td>" +
+            cmx_suburb +
+            "</td><td>" +
+            cmx_unitnumber +
+            "</td></tr>";
+    }
+
+    nmiTable = nmiTable.replace("@tr", trr);
+    document.getElementById("nmiarea").innerHTML = nmiTable;
+    $("#nmi-table-result").DataTable({
+        pageLength: 5,
+        pagingType: "numbers",
+        bLengthChange: false,
+        bFilter: true,
+        bInfo: false,
+        searching: false,
+    });
+};
+
+//Call this function to construct results table for SANS
+EQL.WebResource.Common.constructResultPremiseSearch = function () {
+    "use strict";
+    nmiCount = AllRetrievedRecordFromSearch.length;
+    countElement = "";
+    if (nmiCount > 1) {
+        countElement = `<div id="row-count" style="text-align: end;">Row Count: <b>${nmiCount}</b></div>`;
+    }
+
+    let nmiTable =
+        countElement + "<table id='nmi-table-result' class='display table'><thead><th style='display: none;'>NMI Num</th><th class='ckeck_1'></th><th>NMI</th><th>Address</th></tr></thead><tbody>@tr</tbody></table>";
+    let trr = "";
+    for (let i = 0; i < AllRetrievedRecordFromSearch.length; i++) {
+
+        let result = AllRetrievedRecordFromSearch[i];
+        // NMI Attributes to use in columns
+        let cmx_virtualnmiid = result["cmx_virtualnmiid"]; // Guid
+        let cmx_address = result["cmx_address"]; // Text
+        // let cmx_connectiontype = result["cmx_connectiontype"]; // Text
+        let cmx_name = EQL.WebResource.Common.maskNMI(result["cmx_name"].toString()); // Text
+        let isChecked = "";
+        if (selectedNMIRecord.length > 0) {
+            let index = selectedNMIRecord.findIndex(function (item) {
+                return item.cmx_virtualnmiid === cmx_virtualnmiid;
+            })
+            if (index !== -1) {
+                isChecked = "checked"
+            }
+        }
+
+        //Attaching NMi attributes per table row
+        trr =
+            trr +
+            "<tr><td style='display: none;'>" +
+            cmx_virtualnmiid +
+            "</td><td><input id='" + cmx_virtualnmiid + "' type='checkbox' class='chkNumber' value='" + cmx_virtualnmiid + "'" + " onclick=EQL.WebResource.Common.oncheckNMIRow('" + cmx_virtualnmiid + "') " + isChecked + ">" +
+            "</td><td><strong class='cmx_name'>" +
+            cmx_name +
+            "</strong></td><td><strong class='cmx_address'>" +
+            cmx_address +
+            "</strong></td></tr>";
+    }
+
+    nmiTable = nmiTable.replace("@tr", trr);
+    document.getElementById("nmiarea").innerHTML = nmiTable;
+    $("#nmi-table-result").DataTable({
+        pageLength: 5,
+        pagingType: "numbers",
+        bLengthChange: false,
+        bFilter: true,
+        bInfo: false,
+        searching: false,
+    });
+};
+
+//Convert NMI Status to definition (Active, Greenfield, De-Energized, Unknown)
+EQL.WebResource.Common.convertNmiStatus = function (statusAbrv) {
+    "use strict";
+    if (statusAbrv === "A") {
+        return `ACTIVE`;
+    } else if (statusAbrv === "D") {
+        return `DE-ENERGIZED`;
+    } else if (statusAbrv === "G") {
+        return `GREENFIELD`;
+    } else if (statusAbrv === "UN") {
+        return `UNKNOWN`;
+    } else if (statusAbrv === "E" || statusAbrv === "X") {
+        return `EXTINCT`;
+    }
+};
+
+//Returns DNSP (NMI's Company Code) Option Set value
+EQL.WebResource.Common.setDnspOptionSetVal = function (nmiCompanyCode) {
+    "use strict";
+    if (nmiCompanyCode === "EE") {
+        return "768610000";
+    } else if (nmiCompanyCode === "EGX") {
+        return "768610001";
+    }
+};
+
+//Convert NMI streettype to global option set value
+EQL.WebResource.Common.getStreetTypeValue = function (nmiStreetType) {
+    "use strict";
+    let type = nmiStreetType.toUpperCase().trim();
+    let returnTypeValue = null;
+    switch (type) {
+        case "ALLEY":
+            returnTypeValue = 768610000;
+            return returnTypeValue;
+        case "CIRCUIT":
+            returnTypeValue = 768610005;
+            return returnTypeValue;
+        case "COURT":
+            returnTypeValue = 768610008;
+            return returnTypeValue;
+        case "ROAD":
+            returnTypeValue = 768610023;
+            return returnTypeValue;
+        case "STREET":
+            returnTypeValue = 768610025;
+            return returnTypeValue;
+        case "ARCADE":
+            returnTypeValue = 768610001;
+            return returnTypeValue;
+        case "AVENUE":
+            returnTypeValue = 768610002;
+            return returnTypeValue;
+        case "BOULEVARD":
+            returnTypeValue = 768610003;
+            return returnTypeValue;
+        case "BYPASS":
+            returnTypeValue = 768610004;
+            return returnTypeValue;
+        case "CLOSE":
+            returnTypeValue = 768610006;
+            return returnTypeValue;
+        case "CORNER":
+            returnTypeValue = 768610007;
+            return returnTypeValue;
+        case "CRESCENT":
+            returnTypeValue = 768610009;
+            return returnTypeValue;
+        case "CUL-DE-SAC":
+            returnTypeValue = 768610010;
+            return returnTypeValue;
+        case "DRIVE":
+            returnTypeValue = 768610011;
+            return returnTypeValue;
+        case "ESPLANADE":
+            returnTypeValue = 768610012;
+            return returnTypeValue;
+        case "GREEN":
+            returnTypeValue = 768610013;
+            return returnTypeValue;
+        case "GROVE":
+            returnTypeValue = 768610014;
+            return returnTypeValue;
+        case "HIGHWAY":
+            returnTypeValue = 768610015;
+            return returnTypeValue;
+        case "JUNCTION":
+            returnTypeValue = 768610016;
+            return returnTypeValue;
+        case "LANE":
+            returnTypeValue = 768610017;
+            return returnTypeValue;
+        case "LINK":
+            returnTypeValue = 768610018;
+            return returnTypeValue;
+        case "MEWS":
+            returnTypeValue = 768610019;
+            return returnTypeValue;
+        case "PARADE":
+            returnTypeValue = 768610020;
+            return returnTypeValue;
+        case "PLACE":
+            returnTypeValue = 768610021;
+            return returnTypeValue;
+        case "RIDGE":
+            returnTypeValue = 768610022;
+            return returnTypeValue;
+        case "SQUARE":
+            returnTypeValue = 768610024;
+            return returnTypeValue;
+        case "TERRACE":
+            returnTypeValue = 768610026;
+            return returnTypeValue;
+        case "WAY":
+            returnTypeValue = 768610027;
+            return returnTypeValue;
+        default:
+            EQL.WebResource.Common.showAlertMessage("EQL.WebResource.Common.setStreetType() encountered invalid NMI Street Type.");
+            break;
+    }
+};
