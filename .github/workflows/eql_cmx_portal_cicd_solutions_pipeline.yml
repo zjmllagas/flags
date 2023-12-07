@@ -11,7 +11,7 @@ on:
         description: 'name of the solution to worked on from Power Platform'
         required: true
         default: CMX10WebResources
-        type: multi-choice
+        type: choice
         options:
         - CMX10WebResources
         - CMX20Customizing
