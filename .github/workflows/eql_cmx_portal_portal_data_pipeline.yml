@@ -8,7 +8,6 @@ on:
       import-ec-data:
         description: 'Import Electrical Contractors Portal data'
         required: true
-        default: 'Yes'
         type: choice
         options:
           - Yes
@@ -17,11 +16,10 @@ on:
       import-customer-data:
         description: 'Import Customers Portal data'
         required: true
-        default: 'Yes'
         type: choice
         options:
-          - No
           - Yes
+          - No
 
 
 jobs:
