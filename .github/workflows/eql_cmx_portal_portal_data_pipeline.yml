@@ -11,8 +11,8 @@ on:
         default: 'Yes'
         type: choice
         options:
-          - No
           - Yes
+          - No
         
       import-customer-data:
         description: 'Import Customers Portal data'
