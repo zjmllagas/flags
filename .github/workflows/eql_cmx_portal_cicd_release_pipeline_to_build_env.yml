@@ -75,7 +75,7 @@ jobs:
         solution-type: Unmanaged
         
     - name: Import solution as unmanaged to build env
-      uses: microsoft/powerplatform-actions/import-solution@v0
+      uses: microsoft/powerplatform-actions/import-solution@v2
       with:
         environment-url: ${{ secrets.build_url }}
         app-id: ${{ secrets.build_client_id }}

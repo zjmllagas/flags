@@ -1,0 +1,89 @@
+name: eql_cmx_portal_portal_data_pipeline.yml
+
+run-name: Portal Data Deployment Triggered by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      import-ec-data:
+        description: 'Import Electrical Contractors Portal data'
+        required: true
+        type: choice
+        options:
+          - Yes
+          - No
+        
+      import-customer-data:
+        description: 'Import Customers Portal data'
+        required: true
+        type: choice
+        options:
+          - Yes
+          - No
+
+
+jobs:
+  ec-portal-data-to-build-env:
+    if: ${{ github.event.inputs.import-ec-data == 'true'}}
+    uses: Energy-Queensland-Limited/CMX-D365/.github/workflows/eql_cmx_portal_cicd_transport_portal_data_pipeline_to_build_env.yml@main
+    with:
+      portal_name: cmx-electrical-contractors-portal
+    secrets:
+      website_id: ${{ secrets.website_id }} 
+      dev_url: ${{ secrets.dev_url }}
+      dev_client_id: ${{ secrets.dev_client_id }}
+      dev_secrets_id: ${{ secrets.dev_secrets_id }}
+      dev_tenant_id: ${{ secrets.dev_tenant_id }}
+      build_url: ${{ secrets.build_url }}
+      build_client_id: ${{ secrets.build_client_id }}
+      build_secrets_id: ${{ secrets.build_secrets_id }}
+      build_tenant_id: ${{ secrets.build_tenant_id }}
+  
+  ec-portal-data-to-sit-env:
+      if: ${{ github.event.inputs.import-ec-data == 'true'}}
+      needs: [ release-to-sit-env ]
+      uses: Energy-Queensland-Limited/CMX-D365/.github/workflows/eql_cmx_portal_cicd_transport_portal_data_pipeline_to_sit_env.yml@main
+      with:
+        portal_name: cmx-electrical-contractors-portal
+      secrets:
+        website_id: ${{ secrets.website_id }} 
+        build_url: ${{ secrets.build_url }}
+        build_client_id: ${{ secrets.build_client_id }}
+        build_secrets_id: ${{ secrets.build_secrets_id }}
+        build_tenant_id: ${{ secrets.build_tenant_id }}
+        sit_url: ${{ secrets.sit_url }}
+        sit_client_id: ${{ secrets.sit_client_id }}
+        sit_secrets_id: ${{ secrets.sit_secrets_id }}
+        sit_tenant_id: ${{ secrets.sit_tenant_id }}
+  
+  customer-portal-data-to-build-env:
+    if: ${{ github.event.inputs.import-customer-data == 'true'}}
+    uses: Energy-Queensland-Limited/CMX-D365/.github/workflows/eql_cmx_portal_cicd_transport_customer_portal_data_pipeline_to_build_env.yml@main
+    with:
+      portal_name: cmx-customer-portal
+    secrets:
+      customer_website_id: ${{ secrets.customer_website_id }} 
+      dev_url: ${{ secrets.dev_url }}
+      dev_client_id: ${{ secrets.dev_client_id }}
+      dev_secrets_id: ${{ secrets.dev_secrets_id }}
+      dev_tenant_id: ${{ secrets.dev_tenant_id }}
+      build_url: ${{ secrets.build_url }}
+      build_client_id: ${{ secrets.build_client_id }}
+      build_secrets_id: ${{ secrets.build_secrets_id }}
+      build_tenant_id: ${{ secrets.build_tenant_id }}
+
+  customer-portal-data-to-sit-env:
+      if: ${{ github.event.inputs.import-customer-data == 'true'}}
+      uses: Energy-Queensland-Limited/CMX-D365/.github/workflows/eql_cmx_portal_cicd_transport_customer_portal_data_pipeline_to_sit_env.yml@main
+      with:
+        portal_name: cmx-customer-portal
+      secrets:
+        customer_website_id: ${{ secrets.customer_website_id }} 
+        build_url: ${{ secrets.build_url }}
+        build_client_id: ${{ secrets.build_client_id }}
+        build_secrets_id: ${{ secrets.build_secrets_id }}
+        build_tenant_id: ${{ secrets.build_tenant_id }}
+        sit_url: ${{ secrets.sit_url }}
+        sit_client_id: ${{ secrets.sit_client_id }}
+        sit_secrets_id: ${{ secrets.sit_secrets_id }}
+        sit_tenant_id: ${{ secrets.sit_tenant_id }}

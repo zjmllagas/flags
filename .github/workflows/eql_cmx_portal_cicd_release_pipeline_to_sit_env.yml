@@ -56,7 +56,7 @@ jobs:
 
     - name: Import solution to sit env 
       if: ${{ github.event.inputs.upgrade != 'true'}}
-      uses: microsoft/powerplatform-actions/import-solution@v0
+      uses: microsoft/powerplatform-actions/import-solution@v2
       with:
         environment-url: ${{ secrets.sit_url }}
         app-id: ${{ secrets.sit_client_id }}

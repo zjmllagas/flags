@@ -1,21 +1,18 @@
-name: eql_cmx_portal_cicd_cmx10_pipeline.yml
-# Export CMX20WebResources solution from DEV environment
+name: eql_cmx_portal_cicd_export_from_dev_pipeline.yml
+# Export solution from DEV environment
 #  unpack it and prepare, commit and push a git branch with the changes
 
-run-name: Triggered by @${{ github.actor }}
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       # Change this value
       solution_name:
         description: 'name of the solution to worked on from Power Platform'
         required: true
-        default: CMX10WebResources
         type: string
       branch_name:
         description: 'name of the branch created'
         required: true
-        default: solution
         type: string        
        #Do Not change these values
       solution_exported_folder:
@@ -45,15 +42,16 @@ on:
         required: true
       dev_secrets_id:
         description: 'The secret value for authentication using SPN'
-        required: true    
+        required: true      
 
 jobs:
-  export-cmx10-from-dev:
-    environment: dev
+  export-from-dev:
+    environment: dev    
     runs-on: windows-latest
     env:
       RUNNER_DEBUG: 1
     steps:
+
       - name: git config to accept long paths
         run: |
           git config user.name "GitHub Actions Bot"
@@ -61,12 +59,13 @@ jobs:
           git config --system core.longpaths true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
+
       - uses: actions/checkout@v3
         with:
           lfs: true
-
-      - name: export cmx10 solution from dev
+                        
+      - name: export solution from dev
         uses: microsoft/powerplatform-actions/export-solution@v0
         with:
           environment-url: ${{ secrets.dev_url }}
@@ -75,7 +74,7 @@ jobs:
           tenant-id: ${{ secrets.dev_tenant_id }}  
           solution-name: ${{ inputs.solution_name }}
           solution-output-file: ${{ inputs.solution_exported_folder}}/${{ inputs.solution_name }}.zip
-      
+          
       - name: check solution
         uses: microsoft/powerplatform-actions/check-solution@v0
         with:
@@ -85,7 +84,7 @@ jobs:
           tenant-id: ${{ secrets.dev_tenant_id }}
           path: ${{ inputs.solution_exported_folder}}/${{ inputs.solution_name }}.zip
           checker-logs-artifact-name: ${{ inputs.solution_name }}
-      
+        
       - name: unpack solution
         uses: microsoft/powerplatform-actions/unpack-solution@v0
         with:
@@ -127,27 +126,28 @@ jobs:
           git pull origin develop --allow-unrelated-histories --strategy-option ours
           git commit -m "Merge with develop branch"
           git push
+
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+
       - name: create pull request
         run: |
           gh pr create -B develop -H ${{ inputs.branch_name }}-${{ inputs.solution_name }} --title 'Merge ${{ inputs.branch_name }} into develop' --body 'Created by Github action'
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: merge pull requests
         run: |          
           gh pr merge --admin --merge --delete-branch ${{ inputs.branch_name }}-${{ inputs.solution_name }}
         env:
             GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-
+            
       - name: download check-solution logs
         uses: actions/download-artifact@v2
         with:
           name: ${{ inputs.solution_name }}
           path: logs/${{ inputs.solution_name }}
-      
+          
       - name: push check-solution logs to branch
         run: |
           git --version
@@ -166,4 +166,4 @@ jobs:
 
       - name: Display structure of downloaded files
         run: ls -R
-
+      
