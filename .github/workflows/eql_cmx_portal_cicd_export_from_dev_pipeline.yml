@@ -66,7 +66,7 @@ jobs:
           lfs: true
                         
       - name: export solution from dev
-        uses: microsoft/powerplatform-actions/export-solution@v2
+        uses: microsoft/powerplatform-actions/export-solution@v0
         with:
           environment-url: ${{ secrets.dev_url }}
           app-id: ${{ secrets.dev_client_id }}
@@ -76,7 +76,7 @@ jobs:
           solution-output-file: ${{ inputs.solution_exported_folder}}/${{ inputs.solution_name }}.zip
           
       - name: check solution
-        uses: microsoft/powerplatform-actions/check-solution@v2
+        uses: microsoft/powerplatform-actions/check-solution@v0
         with:
           environment-url: ${{ secrets.dev_url }}
           app-id: ${{ secrets.dev_client_id }}
@@ -86,7 +86,7 @@ jobs:
           checker-logs-artifact-name: ${{ inputs.solution_name }}
         
       - name: unpack solution
-        uses: microsoft/powerplatform-actions/unpack-solution@v2
+        uses: microsoft/powerplatform-actions/unpack-solution@v0
         with:
           solution-file: ${{ inputs.solution_exported_folder}}/${{ inputs.solution_name }}.zip
           solution-folder: ${{ inputs.solution_folder}}/${{ inputs.solution_name }}
@@ -106,7 +106,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: branch solution
-        uses: microsoft/powerplatform-actions/branch-solution@v2
+        uses: microsoft/powerplatform-actions/branch-solution@v0
         with:
           solution-folder: ${{ inputs.solution_folder}}/${{ inputs.solution_name }}
           solution-target-folder: ${{ inputs.solution_target_folder}}/${{ inputs.solution_name }}
